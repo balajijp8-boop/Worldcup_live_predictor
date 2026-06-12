@@ -1,0 +1,13 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/
+
+# Node (only if you run the proxy with deps)
+node_modules/
+npm-debug.log*
+
+# Local secrets — copy config.js and keep keys out of git if you fork
+# js/config.local.js
