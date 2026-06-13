@@ -21,6 +21,13 @@ const CONFIG = {
   // Node proxy). Or point at your own proxy, e.g. 'http://localhost:8787/'.
   PROXY_URL: '',
 
+  // ---- Live scores: TheSportsDB (FREE, CORS-enabled, no token) -------------
+  // Works directly from the browser / GitHub Pages — this is the live source.
+  ENABLE_LIVESCORES: true,
+  LIVESCORE_BASE: 'https://www.thesportsdb.com/api/v1/json/3',
+  WC_LEAGUE_ID: 4429,                  // TheSportsDB league id for the 2026 World Cup
+  LIVESCORE_POLL_MS: 60_000,           // re-check for new scores every 60s
+
   // ---- Polling -------------------------------------------------------------
   POLL_INTERVAL_MS: 60_000,            // how often to re-check for finished games
 

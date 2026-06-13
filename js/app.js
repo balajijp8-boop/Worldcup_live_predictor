@@ -296,6 +296,44 @@ async function startMarketFeed() {
   setInterval(pull, CONFIG.MARKET_REFRESH_MS);
 }
 
+/* ---- LIVE World Cup scores (TheSportsDB — free, CORS, works on the site) - */
+function mergeLiveScores(events) {
+  if (!events) return;
+  let changed = false;
+  for (const ev of events) {
+    const fx = state.groupFixtures.find(f => f.home === ev.home && f.away === ev.away);
+    if (!fx) continue;
+    if (!fx.predicted) {
+      const a = state.teamsByName[fx.home], b = state.teamsByName[fx.away];
+      if (a && b) fx.predicted = Engine.matchProbabilities(a, b);
+    }
+    if (ev.status === 'FINISHED' && ev.homeGoals != null && fx.status !== 'FINISHED') {
+      fx.homeGoals = ev.homeGoals; fx.awayGoals = ev.awayGoals; fx.status = 'FINISHED';
+      onResult(fx, false);                       // updates Elo + re-simulates + renders
+      changed = true;
+    } else if (ev.status === 'LIVE') {
+      fx.status = 'LIVE';
+      if (ev.homeGoals != null) { fx.homeGoals = ev.homeGoals; fx.awayGoals = ev.awayGoals; }
+      changed = true;
+    }
+  }
+  if (changed) { recomputeForm(); UI.renderMatches(state); }
+}
+
+async function startLiveScores() {
+  if (typeof LiveScore === 'undefined' || !CONFIG.ENABLE_LIVESCORES) return;
+  const pull = async () => {
+    try {
+      mergeLiveScores(await LiveScore.fetchEvents());
+      UI.setStatus('LIVE · TheSportsDB', 'live');
+    } catch (err) {
+      UI.setStatus('Stable · press ↻ Refresh', 'idle');
+    }
+  };
+  await pull();
+  setInterval(pull, CONFIG.LIVESCORE_POLL_MS);
+}
+
 /* ---- Live player-strength & form feed (API-Football) -------------------- */
 async function startPlayerFeed() {
   if (typeof PlayerData === 'undefined' || !CONFIG.PLAYER_API_KEY) {
@@ -333,6 +371,7 @@ async function init() {
 
   startMarketFeed();
   startPlayerFeed();
+  startLiveScores();          // real WC scores, free + CORS, updates the live site
 
   // Odds are now STABLE: they only change when real results arrive (live API)
   // or when you press "Refresh odds". No more auto-generated churn.

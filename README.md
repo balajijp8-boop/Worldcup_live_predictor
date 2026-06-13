@@ -64,9 +64,19 @@ bundled real data — no keys or signup required.
 
 ---
 
-## Optional live data
+## Live scores (on by default, free, no setup)
 
-The app is fully functional offline. Two optional integrations add live feeds:
+Real 2026 World Cup scores come from **TheSportsDB** (free key, CORS-enabled), so
+they update **live in the browser — even on the hosted GitHub Pages site**, with
+no token and no proxy. Every finished match updates ratings + form and re-runs
+the simulation automatically (`js/livescore.js`, league id 4429).
+
+> football-data.org is *not* used for the World Cup: its free tier paywalls the
+> WC and sends no CORS header, so it can't run client-side.
+
+## Optional extra feeds
+
+The app is fully functional offline. Optional integrations add more live data:
 
 **Live scores** ([football-data.org](https://www.football-data.org/client/register), free)
 1. Paste your token into `API_TOKEN` in `js/config.js`.
