@@ -1,3 +1,5 @@
+### 🌐 https://balajijp8-boop.github.io/Worldcup_live_predictor/
+
 # 🏆 World Cup 2026 Predictor
 
 An interactive sports-analytics dashboard that predicts the **2026 FIFA World Cup** —
