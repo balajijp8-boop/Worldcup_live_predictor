@@ -92,15 +92,18 @@ const BASE_TEAMS = [
 
 const GROUP_LETTERS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
 
-/* Real matches already played / in progress (as of 12 Jun 2026).
+/* Real matches played / in progress (as of 13 Jun 2026).
  * Names MUST match BASE_TEAMS exactly. Goals omitted -> not yet known. */
 const KNOWN_RESULTS = [
-  // Matchday 1 — Group A (both finished 11 Jun)
-  { home: 'Mexico',      away: 'South Africa',          homeGoals: 2, awayGoals: 0, status: 'FINISHED' },
-  { home: 'South Korea', away: 'Czechia',               homeGoals: 2, awayGoals: 1, status: 'FINISHED' },
-  // 12 Jun — hosts begin (scores arrive via the live API; marked live/scheduled)
-  { home: 'Canada',         away: 'Bosnia & Herzegovina', status: 'LIVE' },
-  { home: 'United States',  away: 'Paraguay',             status: 'SCHEDULED' },
+  // 11 Jun — Group A
+  { home: 'Mexico',         away: 'South Africa',         homeGoals: 2, awayGoals: 0, status: 'FINISHED' },
+  { home: 'South Korea',    away: 'Czechia',              homeGoals: 2, awayGoals: 1, status: 'FINISHED' },
+  // 12 Jun — hosts begin
+  { home: 'Canada',         away: 'Bosnia & Herzegovina', homeGoals: 1, awayGoals: 1, status: 'FINISHED' },
+  { home: 'United States',  away: 'Paraguay',             homeGoals: 2, awayGoals: 1, status: 'FINISHED' },
+  // 13 Jun — today's games
+  { home: 'Qatar',          away: 'Switzerland',          status: 'LIVE' },
+  { home: 'Brazil',         away: 'Morocco',              status: 'LIVE' },
 ];
 
 if (typeof module !== 'undefined') module.exports = { BASE_TEAMS, GROUP_LETTERS, KNOWN_RESULTS };
