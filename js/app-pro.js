@@ -53,6 +53,19 @@ function recomputeRatings() {
 
 function buildGroupFixtures() {
   let id = 1;
+  // Use the real published schedule, ordered chronologically by kickoff.
+  if (typeof GROUP_FIXTURES !== 'undefined' && GROUP_FIXTURES.length) {
+    const sorted = [...GROUP_FIXTURES].sort((a, b) => (a.ko < b.ko ? -1 : a.ko > b.ko ? 1 : 0));
+    for (const m of sorted) {
+      state.groupFixtures.push({
+        id: id++, home: m.home, away: m.away, group: m.g,
+        status: 'SCHEDULED', homeGoals: null, awayGoals: null, predicted: null,
+        ko: m.ko, day: m.day, time: m.time, city: m.city,
+      });
+    }
+    return;
+  }
+  // Fallback: generated round-robin (no real dates).
   for (const letter of GROUP_LETTERS) {
     const g = BASE_TEAMS.filter(t => t.group === letter).map(t => t.name);
     const pairs = [[0, 1], [2, 3], [0, 2], [1, 3], [0, 3], [1, 2]];

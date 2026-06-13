@@ -334,9 +334,9 @@ var UI = (() => {
   function renderMatches(state) {
     const list = $('match-list');
     if (!list) return;
-    const rank = { LIVE: 0, FINISHED: 1, SCHEDULED: 2 };
+    // Chronological — exactly the order the matches kick off.
     const fixtures = [...state.groupFixtures]
-      .sort((x, y) => (rank[x.status] ?? 2) - (rank[y.status] ?? 2) || x.id - y.id);
+      .sort((x, y) => (x.ko || '').localeCompare(y.ko || '') || x.id - y.id);
 
     list.innerHTML = fixtures.map(fx => {
       const a = state.teamsByName[fx.home], b = state.teamsByName[fx.away];
@@ -382,7 +382,7 @@ var UI = (() => {
 
       return `<button class="match-card" data-id="${fx.id}" style="width:100%;text-align:left;cursor:pointer;display:block;background:${bg};border:1px solid ${bd};padding:16px 18px;transition:background .15s,border-color .15s;margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;">
-          <span style="font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:${C.t3};">Group ${a.group}</span>${statusBadge}
+          <span style="font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:${C.t3};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">Group ${a.group}${fx.day ? ` · ${fx.day}, ${fx.time}` : ''}${fx.city ? ` · ${fx.city}` : ''}</span><span style="flex-shrink:0;margin-left:10px;">${statusBadge}</span>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
           <span style="display:flex;align-items:center;gap:9px;font-size:14px;font-weight:500;color:${C.t1};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;letter-spacing:-0.005em;">${flag(a, 'sm')}${fx.home}</span>

@@ -92,6 +92,96 @@ const BASE_TEAMS = [
 
 const GROUP_LETTERS = ['A','B','C','D','E','F','G','H','I','J','K','L'];
 
+/* Official 2026 group-stage schedule (all 72 matches, 11–27 Jun).
+ * `ko` = sortable kickoff (ET, 24h) used to order the fixtures chronologically.
+ * Times are ET as published. Team names are canonical (match BASE_TEAMS). */
+const GROUP_FIXTURES = [
+  // Group A
+  { g:'A', home:'Mexico',        away:'South Africa',          ko:'2026-06-11T15:00', day:'Thu Jun 11', time:'3:00 PM',  city:'Mexico City' },
+  { g:'A', home:'South Korea',   away:'Czechia',               ko:'2026-06-11T22:00', day:'Thu Jun 11', time:'10:00 PM', city:'Guadalajara' },
+  { g:'A', home:'Czechia',       away:'South Africa',          ko:'2026-06-18T12:00', day:'Thu Jun 18', time:'12:00 PM', city:'Atlanta' },
+  { g:'A', home:'Mexico',        away:'South Korea',           ko:'2026-06-18T21:00', day:'Thu Jun 18', time:'9:00 PM',  city:'Guadalajara' },
+  { g:'A', home:'Czechia',       away:'Mexico',                ko:'2026-06-24T21:00', day:'Wed Jun 24', time:'9:00 PM',  city:'Mexico City' },
+  { g:'A', home:'South Africa',  away:'South Korea',           ko:'2026-06-24T21:00', day:'Wed Jun 24', time:'9:00 PM',  city:'Monterrey' },
+  // Group B
+  { g:'B', home:'Canada',        away:'Bosnia & Herzegovina',  ko:'2026-06-12T15:00', day:'Fri Jun 12', time:'3:00 PM',  city:'Toronto' },
+  { g:'B', home:'Qatar',         away:'Switzerland',           ko:'2026-06-13T15:00', day:'Sat Jun 13', time:'3:00 PM',  city:'San Francisco' },
+  { g:'B', home:'Switzerland',   away:'Bosnia & Herzegovina',  ko:'2026-06-18T15:00', day:'Thu Jun 18', time:'3:00 PM',  city:'Los Angeles' },
+  { g:'B', home:'Canada',        away:'Qatar',                 ko:'2026-06-18T18:00', day:'Thu Jun 18', time:'6:00 PM',  city:'Vancouver' },
+  { g:'B', home:'Switzerland',   away:'Canada',                ko:'2026-06-24T15:00', day:'Wed Jun 24', time:'3:00 PM',  city:'Vancouver' },
+  { g:'B', home:'Bosnia & Herzegovina', away:'Qatar',          ko:'2026-06-24T15:00', day:'Wed Jun 24', time:'3:00 PM',  city:'Seattle' },
+  // Group C
+  { g:'C', home:'Brazil',        away:'Morocco',               ko:'2026-06-13T18:00', day:'Sat Jun 13', time:'6:00 PM',  city:'New York/NJ' },
+  { g:'C', home:'Haiti',         away:'Scotland',              ko:'2026-06-13T21:00', day:'Sat Jun 13', time:'9:00 PM',  city:'Boston' },
+  { g:'C', home:'Scotland',      away:'Morocco',               ko:'2026-06-19T18:00', day:'Fri Jun 19', time:'6:00 PM',  city:'Boston' },
+  { g:'C', home:'Brazil',        away:'Haiti',                 ko:'2026-06-19T21:00', day:'Fri Jun 19', time:'9:00 PM',  city:'Philadelphia' },
+  { g:'C', home:'Scotland',      away:'Brazil',                ko:'2026-06-24T18:00', day:'Wed Jun 24', time:'6:00 PM',  city:'Miami' },
+  { g:'C', home:'Morocco',       away:'Haiti',                 ko:'2026-06-24T18:00', day:'Wed Jun 24', time:'6:00 PM',  city:'Atlanta' },
+  // Group D
+  { g:'D', home:'United States', away:'Paraguay',              ko:'2026-06-12T21:00', day:'Fri Jun 12', time:'9:00 PM',  city:'Los Angeles' },
+  { g:'D', home:'Australia',     away:'Turkey',                ko:'2026-06-13T00:00', day:'Sat Jun 13', time:'12:00 AM', city:'Vancouver' },
+  { g:'D', home:'Turkey',        away:'Paraguay',              ko:'2026-06-19T00:00', day:'Fri Jun 19', time:'12:00 AM', city:'San Francisco' },
+  { g:'D', home:'United States', away:'Australia',             ko:'2026-06-19T15:00', day:'Fri Jun 19', time:'3:00 PM',  city:'Seattle' },
+  { g:'D', home:'Turkey',        away:'United States',         ko:'2026-06-25T22:00', day:'Thu Jun 25', time:'10:00 PM', city:'Los Angeles' },
+  { g:'D', home:'Paraguay',      away:'Australia',             ko:'2026-06-25T22:00', day:'Thu Jun 25', time:'10:00 PM', city:'San Francisco' },
+  // Group E
+  { g:'E', home:'Germany',       away:'Curaçao',               ko:'2026-06-14T13:00', day:'Sun Jun 14', time:'1:00 PM',  city:'Houston' },
+  { g:'E', home:'Ivory Coast',   away:'Ecuador',               ko:'2026-06-14T19:00', day:'Sun Jun 14', time:'7:00 PM',  city:'Philadelphia' },
+  { g:'E', home:'Germany',       away:'Ivory Coast',           ko:'2026-06-20T16:00', day:'Sat Jun 20', time:'4:00 PM',  city:'Toronto' },
+  { g:'E', home:'Ecuador',       away:'Curaçao',               ko:'2026-06-20T20:00', day:'Sat Jun 20', time:'8:00 PM',  city:'Kansas City' },
+  { g:'E', home:'Ecuador',       away:'Germany',               ko:'2026-06-25T16:00', day:'Thu Jun 25', time:'4:00 PM',  city:'New York/NJ' },
+  { g:'E', home:'Curaçao',       away:'Ivory Coast',           ko:'2026-06-25T16:00', day:'Thu Jun 25', time:'4:00 PM',  city:'Philadelphia' },
+  // Group F
+  { g:'F', home:'Netherlands',   away:'Japan',                 ko:'2026-06-14T16:00', day:'Sun Jun 14', time:'4:00 PM',  city:'Dallas' },
+  { g:'F', home:'Sweden',        away:'Tunisia',               ko:'2026-06-14T22:00', day:'Sun Jun 14', time:'10:00 PM', city:'Monterrey' },
+  { g:'F', home:'Tunisia',       away:'Japan',                 ko:'2026-06-20T00:00', day:'Sat Jun 20', time:'12:00 AM', city:'Monterrey' },
+  { g:'F', home:'Netherlands',   away:'Sweden',                ko:'2026-06-20T13:00', day:'Sat Jun 20', time:'1:00 PM',  city:'Houston' },
+  { g:'F', home:'Japan',         away:'Sweden',                ko:'2026-06-25T19:00', day:'Thu Jun 25', time:'7:00 PM',  city:'Dallas' },
+  { g:'F', home:'Tunisia',       away:'Netherlands',           ko:'2026-06-25T19:00', day:'Thu Jun 25', time:'7:00 PM',  city:'Kansas City' },
+  // Group G
+  { g:'G', home:'Belgium',       away:'Egypt',                 ko:'2026-06-15T15:00', day:'Mon Jun 15', time:'3:00 PM',  city:'Seattle' },
+  { g:'G', home:'Iran',          away:'New Zealand',           ko:'2026-06-15T21:00', day:'Mon Jun 15', time:'9:00 PM',  city:'Los Angeles' },
+  { g:'G', home:'Belgium',       away:'Iran',                  ko:'2026-06-21T15:00', day:'Sun Jun 21', time:'3:00 PM',  city:'Los Angeles' },
+  { g:'G', home:'New Zealand',   away:'Egypt',                 ko:'2026-06-21T21:00', day:'Sun Jun 21', time:'9:00 PM',  city:'Vancouver' },
+  { g:'G', home:'Egypt',         away:'Iran',                  ko:'2026-06-26T23:00', day:'Fri Jun 26', time:'11:00 PM', city:'Seattle' },
+  { g:'G', home:'New Zealand',   away:'Belgium',               ko:'2026-06-26T23:00', day:'Fri Jun 26', time:'11:00 PM', city:'Vancouver' },
+  // Group H
+  { g:'H', home:'Spain',         away:'Cape Verde',            ko:'2026-06-15T12:00', day:'Mon Jun 15', time:'12:00 PM', city:'Atlanta' },
+  { g:'H', home:'Saudi Arabia',  away:'Uruguay',               ko:'2026-06-15T18:00', day:'Mon Jun 15', time:'6:00 PM',  city:'Miami' },
+  { g:'H', home:'Spain',         away:'Saudi Arabia',          ko:'2026-06-21T12:00', day:'Sun Jun 21', time:'12:00 PM', city:'Atlanta' },
+  { g:'H', home:'Uruguay',       away:'Cape Verde',            ko:'2026-06-21T18:00', day:'Sun Jun 21', time:'6:00 PM',  city:'Miami' },
+  { g:'H', home:'Cape Verde',    away:'Saudi Arabia',          ko:'2026-06-26T20:00', day:'Fri Jun 26', time:'8:00 PM',  city:'Houston' },
+  { g:'H', home:'Uruguay',       away:'Spain',                 ko:'2026-06-26T20:00', day:'Fri Jun 26', time:'8:00 PM',  city:'Guadalajara' },
+  // Group I
+  { g:'I', home:'France',        away:'Senegal',               ko:'2026-06-16T15:00', day:'Tue Jun 16', time:'3:00 PM',  city:'New York/NJ' },
+  { g:'I', home:'Iraq',          away:'Norway',                ko:'2026-06-16T18:00', day:'Tue Jun 16', time:'6:00 PM',  city:'Boston' },
+  { g:'I', home:'France',        away:'Iraq',                  ko:'2026-06-22T17:00', day:'Mon Jun 22', time:'5:00 PM',  city:'Philadelphia' },
+  { g:'I', home:'Norway',        away:'Senegal',               ko:'2026-06-22T20:00', day:'Mon Jun 22', time:'8:00 PM',  city:'New York/NJ' },
+  { g:'I', home:'Norway',        away:'France',                ko:'2026-06-26T15:00', day:'Fri Jun 26', time:'3:00 PM',  city:'Boston' },
+  { g:'I', home:'Senegal',       away:'Iraq',                  ko:'2026-06-26T15:00', day:'Fri Jun 26', time:'3:00 PM',  city:'Toronto' },
+  // Group J
+  { g:'J', home:'Austria',       away:'Jordan',                ko:'2026-06-16T00:00', day:'Tue Jun 16', time:'12:00 AM', city:'San Francisco' },
+  { g:'J', home:'Argentina',     away:'Algeria',               ko:'2026-06-16T21:00', day:'Tue Jun 16', time:'9:00 PM',  city:'Kansas City' },
+  { g:'J', home:'Argentina',     away:'Austria',               ko:'2026-06-22T13:00', day:'Mon Jun 22', time:'1:00 PM',  city:'Dallas' },
+  { g:'J', home:'Jordan',        away:'Algeria',               ko:'2026-06-22T23:00', day:'Mon Jun 22', time:'11:00 PM', city:'San Francisco' },
+  { g:'J', home:'Algeria',       away:'Austria',               ko:'2026-06-27T22:00', day:'Sat Jun 27', time:'10:00 PM', city:'Kansas City' },
+  { g:'J', home:'Jordan',        away:'Argentina',             ko:'2026-06-27T22:00', day:'Sat Jun 27', time:'10:00 PM', city:'Dallas' },
+  // Group K
+  { g:'K', home:'Portugal',      away:'DR Congo',              ko:'2026-06-17T13:00', day:'Wed Jun 17', time:'1:00 PM',  city:'Houston' },
+  { g:'K', home:'Uzbekistan',    away:'Colombia',              ko:'2026-06-17T22:00', day:'Wed Jun 17', time:'10:00 PM', city:'Mexico City' },
+  { g:'K', home:'Portugal',      away:'Uzbekistan',            ko:'2026-06-23T13:00', day:'Tue Jun 23', time:'1:00 PM',  city:'Houston' },
+  { g:'K', home:'Colombia',      away:'DR Congo',              ko:'2026-06-23T22:00', day:'Tue Jun 23', time:'10:00 PM', city:'Guadalajara' },
+  { g:'K', home:'Colombia',      away:'Portugal',              ko:'2026-06-27T19:30', day:'Sat Jun 27', time:'7:30 PM',  city:'Miami' },
+  { g:'K', home:'DR Congo',      away:'Uzbekistan',            ko:'2026-06-27T19:30', day:'Sat Jun 27', time:'7:30 PM',  city:'Atlanta' },
+  // Group L
+  { g:'L', home:'England',       away:'Croatia',               ko:'2026-06-17T16:00', day:'Wed Jun 17', time:'4:00 PM',  city:'Dallas' },
+  { g:'L', home:'Ghana',         away:'Panama',                ko:'2026-06-17T19:00', day:'Wed Jun 17', time:'7:00 PM',  city:'Toronto' },
+  { g:'L', home:'England',       away:'Ghana',                 ko:'2026-06-23T16:00', day:'Tue Jun 23', time:'4:00 PM',  city:'Boston' },
+  { g:'L', home:'Panama',        away:'Croatia',               ko:'2026-06-23T19:00', day:'Tue Jun 23', time:'7:00 PM',  city:'Toronto' },
+  { g:'L', home:'Panama',        away:'England',               ko:'2026-06-27T17:00', day:'Sat Jun 27', time:'5:00 PM',  city:'New York/NJ' },
+  { g:'L', home:'Croatia',       away:'Ghana',                 ko:'2026-06-27T17:00', day:'Sat Jun 27', time:'5:00 PM',  city:'Philadelphia' },
+];
+
 /* Real matches played / in progress (as of 13 Jun 2026).
  * Names MUST match BASE_TEAMS exactly. Goals omitted -> not yet known. */
 const KNOWN_RESULTS = [
@@ -106,4 +196,4 @@ const KNOWN_RESULTS = [
   // normal upcoming fixtures; the live feed flips them to LIVE/FT when they kick off.
 ];
 
-if (typeof module !== 'undefined') module.exports = { BASE_TEAMS, GROUP_LETTERS, KNOWN_RESULTS };
+if (typeof module !== 'undefined') module.exports = { BASE_TEAMS, GROUP_LETTERS, GROUP_FIXTURES, KNOWN_RESULTS };
