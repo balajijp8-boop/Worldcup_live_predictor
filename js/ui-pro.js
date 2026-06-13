@@ -11,19 +11,9 @@ var UI = (() => {
   const $ = id => document.getElementById(id);
   const fmtPct = p => (p * 100).toFixed(1) + '%';
 
-  /* Kickoff label in Amsterdam time (CEST). `ko` is stored as ET wall-clock
-   * (EDT = UTC-4 in June); we attach that offset to get the true instant, then
-   * format it in Europe/Amsterdam so the date/day roll over correctly. */
+  /* Kickoff label — times are already stored in Amsterdam time (CEST). */
   function koLabel(fx) {
-    if (!fx.ko) return fx.day ? `${fx.day}, ${fx.time}` : '';
-    const d = new Date(fx.ko + ':00-04:00');
-    if (isNaN(d.getTime())) return fx.day ? `${fx.day}, ${fx.time}` : '';
-    const s = d.toLocaleString('en-GB', {
-      weekday: 'short', day: 'numeric', month: 'short',
-      hour: '2-digit', minute: '2-digit', hour12: false,
-      timeZone: 'Europe/Amsterdam',
-    });
-    return s + ' CEST';
+    return fx.day ? `${fx.day}, ${fx.time} CEST` : '';
   }
 
   // Editorial palette
