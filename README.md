@@ -2,6 +2,14 @@
 
 # 🏆 World Cup 2026 Predictor
 
+[![Live Demo](https://img.shields.io/badge/live%20demo-online-2ea44f)](https://balajijp8-boop.github.io/Worldcup_live_predictor/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![No build step](https://img.shields.io/badge/build-none-555)
+![Vanilla JS](https://img.shields.io/badge/JavaScript-vanilla-f7df1e)
+![Live scores](https://img.shields.io/badge/scores-live-a52826)
+
+![World Cup 2026 Predictor](assets/hero.png)
+
 An interactive sports-analytics dashboard that predicts the **2026 FIFA World Cup** —
 match win/draw/loss odds, full-tournament championship probabilities, predicted
 group standings, and a predicted knockout bracket all the way to the final.
@@ -10,7 +18,7 @@ It runs on a real statistical pipeline — **FIFA ranking + player strength + fo
 Dixon-Coles bivariate-Poisson match model → Monte-Carlo tournament simulation** —
 and can **train & validate itself on 49,000+ historical international results**.
 
-> Pure HTML + Tailwind (CDN) + vanilla JS. No build step. Open and go.
+> Pure HTML + custom CSS + vanilla JS. No framework, no build step. Open and go.
 
 ---
 
@@ -56,7 +64,7 @@ bundled real data — no keys or signup required.
 | Layer | File | What it does |
 |-------|------|--------------|
 | **Ratings** | `js/data.js` | Real **FIFA ranking points** (June 2026) per team + a curated **squad-talent index** + goal-rate priors. |
-| **Form** | `js/app.js` | Recent-results momentum (`formElo`) folded into the effective rating. |
+| **Form** | `js/app-pro.js` | Recent-results momentum (`formElo`) folded into the effective rating. |
 | **Dixon-Coles** | `js/engine.js` | Bivariate-Poisson match model with the low-score (ρ) correction — the football-industry standard for W/D/L + scoreline odds. |
 | **Monte Carlo** | `js/engine.js` | Plays the *entire* tournament 12,000× (12 groups → best-3rd race → official R32 → Final), tracking how far each team gets. |
 | **Predicted bracket** | `js/engine.js` | Deterministic best-guess bracket from predicted standings + official slotting. |
@@ -97,17 +105,20 @@ Every finished match then updates ratings + form and re-runs the whole simulatio
 ## Project structure
 
 ```
-index.html         Tailwind dashboard shell (UI layout)
+index.html         Editorial single-page UI (custom CSS + Google Fonts)
 js/config.js       Keys, intervals, engine + model weights
 js/data.js         48-team dataset: FIFA pts, squad index, flags, real results
 js/engine.js       Dixon-Coles + Monte-Carlo + official bracket + predictions
 js/train.js        Train & validate on historical results
 js/players.js      API-Football player strength + form (optional)
 js/market.js       Polymarket odds (snapshot + live)
+js/livescore.js    Live World Cup scores via TheSportsDB (free, CORS)
 js/api.js          football-data.org live fixtures/scores (optional)
-js/ui.js           DOM rendering & animation
-js/app.js          Orchestrator / state / recompute cycle
-proxy/server.js    Zero-dependency CORS proxy for the live APIs
+js/ui-pro.js       DOM rendering & animation (editorial design)
+js/motion.js       Scroll reveals, parallax, Ken-Burns motion
+js/app-pro.js      Orchestrator / state / recompute cycle
+proxy/server.js    Zero-dependency CORS proxy for the optional APIs
+assets/            Hero + brand imagery
 ```
 
 ---
