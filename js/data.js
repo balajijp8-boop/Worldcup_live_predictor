@@ -100,10 +100,10 @@ const KNOWN_RESULTS = [
   { home: 'South Korea',    away: 'Czechia',              homeGoals: 2, awayGoals: 1, status: 'FINISHED' },
   // 12 Jun — hosts begin
   { home: 'Canada',         away: 'Bosnia & Herzegovina', homeGoals: 1, awayGoals: 1, status: 'FINISHED' },
-  { home: 'United States',  away: 'Paraguay',             homeGoals: 2, awayGoals: 1, status: 'FINISHED' },
-  // 13 Jun — today's games
-  { home: 'Qatar',          away: 'Switzerland',          status: 'LIVE' },
-  { home: 'Brazil',         away: 'Morocco',              status: 'LIVE' },
+  // 13 Jun
+  { home: 'United States',  away: 'Paraguay',             homeGoals: 4, awayGoals: 1, status: 'FINISHED' },
+  // Qatar v Switzerland and Brazil v Morocco are NOT started yet (NS) — left as
+  // normal upcoming fixtures; the live feed flips them to LIVE/FT when they kick off.
 ];
 
 if (typeof module !== 'undefined') module.exports = { BASE_TEAMS, GROUP_LETTERS, KNOWN_RESULTS };
