@@ -55,17 +55,21 @@ const LiveScore = (() => {
     return res.json();
   }
 
-  /* Fetch finished + upcoming + today's events, de-duplicated. */
+  /* Fetch finished + upcoming + today's events, de-duplicated.
+   * eventsseason is the key one: it returns the FULL list of finished matches
+   * with scores, so every completed game updates (not just a rolling window). */
   async function fetchEvents() {
     const id = CONFIG.WC_LEAGUE_ID;
+    const season = CONFIG.WC_SEASON || 2026;
     const today = new Date().toISOString().slice(0, 10);
-    const [past, next, day] = await Promise.allSettled([
+    const [seas, past, next, day] = await Promise.allSettled([
+      getJSON(`eventsseason.php?id=${id}&s=${season}`),
       getJSON(`eventspastleague.php?id=${id}`),
       getJSON(`eventsnextleague.php?id=${id}`),
       getJSON(`eventsday.php?d=${today}&l=${id}`),
     ]);
     const all = [];
-    for (const r of [past, next, day]) {
+    for (const r of [seas, past, next, day]) {
       if (r.status !== 'fulfilled' || !r.value) continue;
       const arr = r.value.events || r.value.results;
       if (Array.isArray(arr)) all.push(...arr);

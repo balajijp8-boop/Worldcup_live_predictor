@@ -178,6 +178,7 @@ const KNOWN_RESULTS = [
   { home: 'South Korea',    away: 'Czechia',              homeGoals: 2, awayGoals: 1, status: 'FINISHED' }, // 12 Jun
   { home: 'Canada',         away: 'Bosnia & Herzegovina', homeGoals: 1, awayGoals: 1, status: 'FINISHED' }, // 12 Jun
   { home: 'United States',  away: 'Paraguay',             homeGoals: 4, awayGoals: 1, status: 'FINISHED' }, // 13 Jun
+  { home: 'Brazil',         away: 'Morocco',              homeGoals: 1, awayGoals: 1, status: 'FINISHED' }, // 13 Jun
   // Later games kick off through the day — the live feed flips them to LIVE/FT.
 ];
 

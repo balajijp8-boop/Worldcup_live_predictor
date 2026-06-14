@@ -26,6 +26,7 @@ const CONFIG = {
   ENABLE_LIVESCORES: true,
   LIVESCORE_BASE: 'https://www.thesportsdb.com/api/v1/json/3',
   WC_LEAGUE_ID: 4429,                  // TheSportsDB league id for the 2026 World Cup
+  WC_SEASON: 2026,                     // season for the full finished-games feed
   LIVESCORE_POLL_MS: 60_000,           // re-check for new scores every 60s
 
   // ---- Polling -------------------------------------------------------------
