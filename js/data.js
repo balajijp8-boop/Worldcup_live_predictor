@@ -171,15 +171,10 @@ const GROUP_FIXTURES = [
   { g:'J', home:'Jordan',               away:'Argentina',            ko:'2026-06-28T04:00', day:'Sun 28 Jun', time:'04:00', city:'Dallas' },
 ];
 
-/* Real matches played / in progress (as of 13 Jun 2026).
- * Names MUST match BASE_TEAMS exactly. Goals omitted -> not yet known. */
-const KNOWN_RESULTS = [
-  { home: 'Mexico',         away: 'South Africa',         homeGoals: 2, awayGoals: 0, status: 'FINISHED' }, // 11 Jun
-  { home: 'South Korea',    away: 'Czechia',              homeGoals: 2, awayGoals: 1, status: 'FINISHED' }, // 12 Jun
-  { home: 'Canada',         away: 'Bosnia & Herzegovina', homeGoals: 1, awayGoals: 1, status: 'FINISHED' }, // 12 Jun
-  { home: 'United States',  away: 'Paraguay',             homeGoals: 4, awayGoals: 1, status: 'FINISHED' }, // 13 Jun
-  { home: 'Brazil',         away: 'Morocco',              homeGoals: 1, awayGoals: 1, status: 'FINISHED' }, // 13 Jun
-  // Later games kick off through the day — the live feed flips them to LIVE/FT.
-];
+/* Results are NOT hardcoded — everything is pulled live from TheSportsDB
+ * (js/livescore.js) on page load and every 60s, so scores, live status and the
+ * whole simulation update automatically with zero manual maintenance.
+ * Leave this empty; the feed is the single source of truth. */
+const KNOWN_RESULTS = [];
 
 if (typeof module !== 'undefined') module.exports = { BASE_TEAMS, GROUP_LETTERS, GROUP_FIXTURES, KNOWN_RESULTS };

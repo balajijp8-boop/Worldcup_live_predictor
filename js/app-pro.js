@@ -103,19 +103,26 @@ function mergeLiveMatches(matches) {
   if (!matches) return;
   let changed = false;
   for (const m of matches) {
-    const fx = state.groupFixtures.find(f => sameTeam(f.home, m.home) && sameTeam(f.away, m.away));
+    // Exact match on canonical names (no fuzzy "South Africa"/"South Korea"
+    // collisions); also handle the feed listing home/away the other way round.
+    let fx = state.groupFixtures.find(f => f.home === m.home && f.away === m.away);
+    let hg = m.homeGoals, ag = m.awayGoals;
+    if (!fx) {
+      fx = state.groupFixtures.find(f => f.home === m.away && f.away === m.home);
+      if (fx) { hg = m.awayGoals; ag = m.homeGoals; }
+    }
     if (!fx) continue;
     if (!fx.predicted) {
       const a = state.teamsByName[fx.home], b = state.teamsByName[fx.away];
       if (a && b) fx.predicted = Engine.matchProbabilities(a, b);
     }
-    if (m.status === 'FINISHED' && m.homeGoals != null) {
-      if (fx.status !== 'FINISHED' || fx.homeGoals !== m.homeGoals || fx.awayGoals !== m.awayGoals) {
-        fx.homeGoals = m.homeGoals; fx.awayGoals = m.awayGoals; fx.status = 'FINISHED'; changed = true;
+    if (m.status === 'FINISHED' && hg != null) {
+      if (fx.status !== 'FINISHED' || fx.homeGoals !== hg || fx.awayGoals !== ag) {
+        fx.homeGoals = hg; fx.awayGoals = ag; fx.status = 'FINISHED'; changed = true;
       }
     } else if (['LIVE', 'IN_PLAY', 'PAUSED'].includes(m.status)) {
       fx.status = 'LIVE';
-      if (m.homeGoals != null) { fx.homeGoals = m.homeGoals; fx.awayGoals = m.awayGoals; }
+      if (hg != null) { fx.homeGoals = hg; fx.awayGoals = ag; }
       changed = true;
     } else if (m.status === 'SCHEDULED' && fx.status !== 'FINISHED') {
       // feed says not started -> undo any stale/baked "live" state
