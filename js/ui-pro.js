@@ -371,9 +371,10 @@ var UI = (() => {
         if (done) {
           const actual = fx.homeGoals > fx.awayGoals ? 'win' : fx.homeGoals === fx.awayGoals ? 'draw' : 'loss';
           const pick = p.win >= p.draw && p.win >= p.loss ? 'win' : p.draw >= p.loss ? 'draw' : 'loss';
-          const hit = pick === actual;
           const exact = p.likelyScore === `${fx.homeGoals}-${fx.awayGoals}`;
-          verdict = `<span style="color:${hit ? C.green : C.red};font-weight:500;">${hit ? 'Called correctly' : 'Upset'}${exact ? ' · exact' : ''}</span>`;
+          const hit = exact || pick === actual;   // nailing the exact score is a hit
+          const label = exact ? 'Exact score ✓' : hit ? 'Called correctly' : 'Upset';
+          verdict = `<span style="color:${hit ? C.green : C.red};font-weight:500;">${label}</span>`;
         } else {
           verdict = `<span style="color:${C.t3};">awaiting result</span>`;
         }
@@ -439,9 +440,11 @@ var UI = (() => {
     if (done) {
       const actual = fx.homeGoals > fx.awayGoals ? 'win' : fx.homeGoals === fx.awayGoals ? 'draw' : 'loss';
       const pick = p.win >= p.draw && p.win >= p.loss ? 'win' : p.draw >= p.loss ? 'draw' : 'loss';
-      const hit = pick === actual;
       const exact = p.likelyScore === `${fx.homeGoals}-${fx.awayGoals}`;
-      verdict = `<div style="text-align:center;font-size:12px;font-weight:500;margin-top:14px;color:${hit ? C.green : C.red};letter-spacing:0.04em;">${hit ? 'Outcome correctly predicted' : 'Result went against the model'}${exact ? ' · exact score' : ''}</div>`;
+      const hit = exact || pick === actual;   // nailing the exact score is a hit
+      const label = exact ? 'Exact scoreline predicted ✓'
+                  : hit ? 'Outcome correctly predicted' : 'Result went against the model';
+      verdict = `<div style="text-align:center;font-size:12px;font-weight:500;margin-top:14px;color:${hit ? C.green : C.red};letter-spacing:0.04em;">${label}</div>`;
     }
 
     const teamBlock = (t, name) => `<div style="text-align:center;flex:1;min-width:0;">
