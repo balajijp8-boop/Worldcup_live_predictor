@@ -55,30 +55,36 @@ const LiveScore = (() => {
     return res.json();
   }
 
-  /* Fetch finished + upcoming + today's events, de-duplicated.
-   * eventsseason is the key one: it returns the FULL list of finished matches
-   * with scores, so every completed game updates (not just a rolling window). */
+  /* Fetch every relevant event and de-duplicate.
+   * The reliable source is eventsday (per-date, with scores), but TheSportsDB
+   * indexes by US date — so a late CEST game lands on the "previous" day. We
+   * therefore sweep a rolling window of days (−4 … +2) plus the season/past/next
+   * lists, so EVERY finished game is captured regardless of the date boundary. */
   async function fetchEvents() {
     const id = CONFIG.WC_LEAGUE_ID;
     const season = CONFIG.WC_SEASON || 2026;
-    const today = new Date().toISOString().slice(0, 10);
-    const [seas, past, next, day] = await Promise.allSettled([
+    const calls = [
       getJSON(`eventsseason.php?id=${id}&s=${season}`),
       getJSON(`eventspastleague.php?id=${id}`),
       getJSON(`eventsnextleague.php?id=${id}`),
-      getJSON(`eventsday.php?d=${today}&l=${id}`),
-    ]);
+    ];
+    for (let i = -4; i <= 2; i++) {
+      const d = new Date(Date.now() + i * 86400000).toISOString().slice(0, 10);
+      calls.push(getJSON(`eventsday.php?d=${d}&l=${id}`));
+    }
+    const results = await Promise.allSettled(calls);
     const all = [];
-    for (const r of [seas, past, next, day]) {
+    for (const r of results) {
       if (r.status !== 'fulfilled' || !r.value) continue;
       const arr = r.value.events || r.value.results;
       if (Array.isArray(arr)) all.push(...arr);
     }
-    // De-dupe by idEvent, prefer the entry that has a score/most-advanced status.
+    // De-dupe by idEvent; prefer the entry that actually has a score.
+    const hasScore = x => x.intHomeScore != null && x.intHomeScore !== '';
     const byId = {};
     for (const e of all) {
       const prev = byId[e.idEvent];
-      if (!prev || (e.intHomeScore != null && prev.intHomeScore == null)) byId[e.idEvent] = e;
+      if (!prev || (hasScore(e) && !hasScore(prev))) byId[e.idEvent] = e;
     }
     return Object.values(byId).map(normalise);
   }
