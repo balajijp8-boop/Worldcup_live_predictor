@@ -191,12 +191,11 @@ var UI = (() => {
     if (!src || !src.bracket) return;
     const predicted = state.bracketMode !== 'sample';
 
-    // Use rounds R16..Final for the mirrored layout (R32 makes 16 leaves which
-    // is fine, but R16 makes the most legible chart). If R32 exists (sample
-    // mode), keep the visualization starting at R16 (winners of R32) instead.
-    let rounds = src.bracket;
-    if (rounds[0] && /Round of 32/i.test(rounds[0].name)) rounds = rounds.slice(1);
+    // Show the FULL 2026 knockout tree starting at the Round of 32 (16 ties →
+    // 8 per side in the mirrored layout), through to the Final.
+    const rounds = src.bracket;
     if (!rounds.length) return;
+    const hasR32 = rounds[0] && /Round of 32/i.test(rounds[0].name);
 
     const f = n => flag(state.teamsByName[n], 'sm');
     const pct = p => `${Math.round(p * 100)}%`;
@@ -240,7 +239,7 @@ var UI = (() => {
     const headerCell = txt => `<div style="flex:1;text-align:center;font-size:10px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:${C.t3};padding:0 4px;">${txt}</div>`;
     const headerSpacer = `<div style="width:170px;flex:0 0 auto;"></div>`;
     const headers = halves.map(r => r.name);
-    const headerBar = `<div style="display:flex;align-items:center;border-top:1px solid ${C.line};border-bottom:1px solid ${C.line};padding:11px 0;margin-bottom:16px;gap:24px;min-width:1140px;">
+    const headerBar = `<div style="display:flex;align-items:center;border-top:1px solid ${C.line};border-bottom:1px solid ${C.line};padding:11px 0;margin-bottom:16px;gap:24px;">
       ${headers.map(h => `<div style="width:170px;text-align:center;font-size:10px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:${C.t3};flex:0 0 auto;">${h}</div>`).join('')}
       <div style="flex:1;text-align:center;font-size:11px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:${C.gold};">Final</div>
       ${[...headers].reverse().map(h => `<div style="width:170px;text-align:center;font-size:10px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:${C.t3};flex:0 0 auto;">${h}</div>`).join('')}
@@ -268,10 +267,12 @@ var UI = (() => {
       </div>
     </div>`;
 
+    const wide = hasR32 ? 1820 : 1280;
+    const tall = hasR32 ? 760 : 560;
     board.innerHTML = `<div style="overflow-x:auto;padding-bottom:8px;">
-      <div style="min-width:1280px;">
+      <div style="min-width:${wide}px;">
         ${headerBar}
-        <div class="bk-grid" style="display:flex;align-items:stretch;gap:24px;min-height:560px;position:relative;">
+        <div class="bk-grid" style="display:flex;align-items:stretch;gap:24px;min-height:${tall}px;position:relative;">
           ${leftRounds}
           ${finalBlock}
           ${rightRounds}
@@ -365,21 +366,23 @@ var UI = (() => {
       </div>` : '';
 
       let predictedInfo = '';
-      if ((done || live) && fx.predicted) {
-        const p = fx.predicted;
-        let verdict;
+      if (probs) {
+        const p = probs;
+        // The model's "pick" is the most likely OUTCOME (not the scoreline) —
+        // judging by outcome keeps the verdict consistent with what we show.
+        const pk = p.win >= p.draw && p.win >= p.loss ? 'win' : p.draw >= p.loss ? 'draw' : 'loss';
+        const pct = Math.round(Math.max(p.win, p.draw, p.loss) * 100);
+        const pkText = pk === 'win' ? `${fx.home} ${pct}%` : pk === 'loss' ? `${fx.away} ${pct}%` : `Draw ${pct}%`;
+        let verdict = '';
         if (done) {
           const actual = fx.homeGoals > fx.awayGoals ? 'win' : fx.homeGoals === fx.awayGoals ? 'draw' : 'loss';
-          const pick = p.win >= p.draw && p.win >= p.loss ? 'win' : p.draw >= p.loss ? 'draw' : 'loss';
-          const exact = p.likelyScore === `${fx.homeGoals}-${fx.awayGoals}`;
-          const hit = exact || pick === actual;   // nailing the exact score is a hit
-          const label = exact ? 'Exact score ✓' : hit ? 'Called correctly' : 'Upset';
-          verdict = `<span style="color:${hit ? C.green : C.red};font-weight:500;">${label}</span>`;
-        } else {
-          verdict = `<span style="color:${C.t3};">awaiting result</span>`;
+          const hit = pk === actual;
+          verdict = `<span style="color:${hit ? C.green : C.red};font-weight:500;">${hit ? 'Called correctly' : 'Upset'}</span>`;
+        } else if (live) {
+          verdict = `<span style="color:${C.t3};">in play</span>`;
         }
         predictedInfo = `<div style="display:flex;justify-content:space-between;font-size:11px;color:${C.t2};margin-top:10px;">
-          <span>Predicted <span style="color:${C.t1};">${p.likelyScore}</span></span>${verdict}
+          <span>Pick <span style="color:${C.t1};">${pkText}</span></span>${verdict}
         </div>`;
       }
 
@@ -441,10 +444,12 @@ var UI = (() => {
       const actual = fx.homeGoals > fx.awayGoals ? 'win' : fx.homeGoals === fx.awayGoals ? 'draw' : 'loss';
       const pick = p.win >= p.draw && p.win >= p.loss ? 'win' : p.draw >= p.loss ? 'draw' : 'loss';
       const exact = p.likelyScore === `${fx.homeGoals}-${fx.awayGoals}`;
-      const hit = exact || pick === actual;   // nailing the exact score is a hit
-      const label = exact ? 'Exact scoreline predicted ✓'
-                  : hit ? 'Outcome correctly predicted' : 'Result went against the model';
-      verdict = `<div style="text-align:center;font-size:12px;font-weight:500;margin-top:14px;color:${hit ? C.green : C.red};letter-spacing:0.04em;">${label}</div>`;
+      const hit = pick === actual;             // judged on the predicted OUTCOME
+      const main = hit ? 'Outcome correctly predicted' : 'Outcome was an upset';
+      const note = exact ? ` · top scoreline (${p.likelyScore}) was exact` : '';
+      verdict = `<div style="text-align:center;font-size:12px;font-weight:500;margin-top:14px;letter-spacing:0.04em;">
+        <span style="color:${hit ? C.green : C.red};">${main}</span><span style="color:${C.green};">${note}</span>
+      </div>`;
     }
 
     const teamBlock = (t, name) => `<div style="text-align:center;flex:1;min-width:0;">

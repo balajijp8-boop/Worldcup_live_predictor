@@ -1,92 +1,66 @@
 /* =============================================================================
- * livescore.js — LIVE World Cup scores via TheSportsDB (free, CORS-enabled)
+ * livescore.js — LIVE World Cup scores via ESPN's free API (CORS-enabled)
  * -----------------------------------------------------------------------------
- * Unlike football-data.org (World Cup is paywalled + no CORS), TheSportsDB's
- * free key serves the 2026 World Cup (league 4429) WITH CORS headers — so this
- * runs straight from the browser on the hosted site, no token and no proxy.
+ * ESPN's public scoreboard returns the ENTIRE 2026 World Cup (all 72 group
+ * games + knockouts) in ONE call, with scores + live status, and sends CORS
+ * headers — so it runs straight from the browser with no key and no proxy.
+ * This replaces TheSportsDB, whose free endpoints only returned patchy windows.
  *
- *   eventspastleague.php  -> recently finished matches (with final scores)
- *   eventsnextleague.php  -> upcoming fixtures
- *   eventsday.php         -> today's matches (live in-progress scores)
+ *   GET .../soccer/fifa.world/scoreboard?dates=YYYYMMDD-YYYYMMDD
  *
- * Returns events normalised + mapped to our canonical team names so app.js can
- * merge them into the fixtures and recompute the odds.
+ * We map ESPN's stable 3-letter team codes to our canonical names, so matching
+ * is exact and every finished/live game updates automatically.
  * ========================================================================== */
 
 const LiveScore = (() => {
 
-  // TheSportsDB team name -> our canonical BASE_TEAMS name.
-  const NAME_MAP = {
-    'USA': 'United States', 'Bosnia-Herzegovina': 'Bosnia & Herzegovina',
-    'Bosnia and Herzegovina': 'Bosnia & Herzegovina', 'Korea Republic': 'South Korea',
-    'Czech Republic': 'Czechia', 'Turkiye': 'Turkey', 'Türkiye': 'Turkey',
-    'Ivory Coast': 'Ivory Coast', "Côte d'Ivoire": 'Ivory Coast', 'Congo DR': 'DR Congo',
-    'Curacao': 'Curaçao', 'Cabo Verde': 'Cape Verde',
+  // ESPN 3-letter code -> our canonical BASE_TEAMS name.
+  const CODE = {
+    ALG: 'Algeria', ARG: 'Argentina', AUS: 'Australia', AUT: 'Austria',
+    BEL: 'Belgium', BIH: 'Bosnia & Herzegovina', BRA: 'Brazil', CAN: 'Canada',
+    CIV: 'Ivory Coast', COD: 'DR Congo', COL: 'Colombia', CPV: 'Cape Verde',
+    CRO: 'Croatia', CUW: 'Curaçao', CZE: 'Czechia', ECU: 'Ecuador',
+    EGY: 'Egypt', ENG: 'England', ESP: 'Spain', FRA: 'France', GER: 'Germany',
+    GHA: 'Ghana', HAI: 'Haiti', IRN: 'Iran', IRQ: 'Iraq', JOR: 'Jordan',
+    JPN: 'Japan', KOR: 'South Korea', KSA: 'Saudi Arabia', MAR: 'Morocco',
+    MEX: 'Mexico', NED: 'Netherlands', NOR: 'Norway', NZL: 'New Zealand',
+    PAN: 'Panama', PAR: 'Paraguay', POR: 'Portugal', QAT: 'Qatar',
+    RSA: 'South Africa', SCO: 'Scotland', SEN: 'Senegal', SUI: 'Switzerland',
+    SWE: 'Sweden', TUN: 'Tunisia', TUR: 'Turkey', URU: 'Uruguay',
+    USA: 'United States', UZB: 'Uzbekistan',
   };
-  const map = n => NAME_MAP[n] || n;
 
-  const FINISHED = ['FT', 'AET', 'PEN', 'Match Finished', 'AP'];
-  const LIVE = ['1H', '2H', 'HT', 'ET', 'LIVE', 'Playing', 'BT', 'P'];
+  const ESPN = (CONFIG.LIVESCORE_BASE || 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard');
+  const RANGE = CONFIG.WC_DATE_RANGE || '20260611-20260719';
 
-  function classify(status, hg, ag) {
-    if (FINISHED.includes(status)) return 'FINISHED';
-    if (LIVE.includes(status)) return 'LIVE';
-    // numeric minute like "57" also means live; scores present + not finished -> live
-    if (/^\d{1,3}('?)$/.test(status || '')) return 'LIVE';
+  function statusOf(comp) {
+    const t = (comp.status && comp.status.type) || {};
+    if (t.state === 'post' || t.completed) return 'FINISHED';
+    if (t.state === 'in') return 'LIVE';
     return 'SCHEDULED';
   }
 
-  function normalise(e) {
-    const hg = e.intHomeScore === null || e.intHomeScore === '' ? null : parseInt(e.intHomeScore, 10);
-    const ag = e.intAwayScore === null || e.intAwayScore === '' ? null : parseInt(e.intAwayScore, 10);
+  function normalise(ev) {
+    const comp = ev.competitions && ev.competitions[0];
+    if (!comp || !comp.competitors) return null;
+    const H = comp.competitors.find(c => c.homeAway === 'home');
+    const A = comp.competitors.find(c => c.homeAway === 'away');
+    if (!H || !A) return null;
+    const name = c => CODE[(c.team && c.team.abbreviation) || ''] || (c.team && c.team.displayName) || '';
+    const num = s => (s === '' || s == null ? null : parseInt(s, 10));
     return {
-      home: map((e.strHomeTeam || '').trim()),
-      away: map((e.strAwayTeam || '').trim()),
-      homeGoals: Number.isFinite(hg) ? hg : null,
-      awayGoals: Number.isFinite(ag) ? ag : null,
-      status: classify(e.strStatus, hg, ag),
-      date: e.dateEvent,
+      home: name(H), away: name(A),
+      homeGoals: num(H.score), awayGoals: num(A.score),
+      status: statusOf(comp),
     };
   }
 
-  async function getJSON(path) {
-    const res = await fetch(`${CONFIG.LIVESCORE_BASE}/${path}`);
-    if (!res.ok) throw new Error('TheSportsDB ' + res.status);
-    return res.json();
-  }
-
-  /* Fetch every relevant event and de-duplicate.
-   * The reliable source is eventsday (per-date, with scores), but TheSportsDB
-   * indexes by US date — so a late CEST game lands on the "previous" day. We
-   * therefore sweep a rolling window of days (−4 … +2) plus the season/past/next
-   * lists, so EVERY finished game is captured regardless of the date boundary. */
+  /* One call -> the whole tournament, normalised + mapped to our team names. */
   async function fetchEvents() {
-    const id = CONFIG.WC_LEAGUE_ID;
-    const season = CONFIG.WC_SEASON || 2026;
-    const calls = [
-      getJSON(`eventsseason.php?id=${id}&s=${season}`),
-      getJSON(`eventspastleague.php?id=${id}`),
-      getJSON(`eventsnextleague.php?id=${id}`),
-    ];
-    for (let i = -4; i <= 2; i++) {
-      const d = new Date(Date.now() + i * 86400000).toISOString().slice(0, 10);
-      calls.push(getJSON(`eventsday.php?d=${d}&l=${id}`));
-    }
-    const results = await Promise.allSettled(calls);
-    const all = [];
-    for (const r of results) {
-      if (r.status !== 'fulfilled' || !r.value) continue;
-      const arr = r.value.events || r.value.results;
-      if (Array.isArray(arr)) all.push(...arr);
-    }
-    // De-dupe by idEvent; prefer the entry that actually has a score.
-    const hasScore = x => x.intHomeScore != null && x.intHomeScore !== '';
-    const byId = {};
-    for (const e of all) {
-      const prev = byId[e.idEvent];
-      if (!prev || (hasScore(e) && !hasScore(prev))) byId[e.idEvent] = e;
-    }
-    return Object.values(byId).map(normalise);
+    const res = await fetch(`${ESPN}?dates=${RANGE}`);
+    if (!res.ok) throw new Error('ESPN ' + res.status);
+    const data = await res.json();
+    return (data.events || []).map(normalise).filter(Boolean);
   }
 
   return { fetchEvents };

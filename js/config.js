@@ -21,12 +21,12 @@ const CONFIG = {
   // Node proxy). Or point at your own proxy, e.g. 'http://localhost:8787/'.
   PROXY_URL: '',
 
-  // ---- Live scores: TheSportsDB (FREE, CORS-enabled, no token) -------------
-  // Works directly from the browser / GitHub Pages — this is the live source.
+  // ---- Live scores: ESPN public API (FREE, CORS-enabled, no token) ---------
+  // One call returns the whole tournament with scores + live status, straight
+  // from the browser / GitHub Pages. This is the live source.
   ENABLE_LIVESCORES: true,
-  LIVESCORE_BASE: 'https://www.thesportsdb.com/api/v1/json/3',
-  WC_LEAGUE_ID: 4429,                  // TheSportsDB league id for the 2026 World Cup
-  WC_SEASON: 2026,                     // season for the full finished-games feed
+  LIVESCORE_BASE: 'https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard',
+  WC_DATE_RANGE: '20260611-20260719',  // full tournament window (one request)
   LIVESCORE_POLL_MS: 60_000,           // re-check for new scores every 60s
 
   // ---- Polling -------------------------------------------------------------
