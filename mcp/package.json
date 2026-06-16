@@ -1,0 +1,12 @@
+{
+  "name": "worldcup-predictor-mcp",
+  "version": "1.0.0",
+  "description": "Model Context Protocol server exposing the World Cup 2026 Predictor engine to Claude.",
+  "type": "commonjs",
+  "private": true,
+  "bin": { "worldcup-predictor-mcp": "server.js" },
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js"
+  }
+}
