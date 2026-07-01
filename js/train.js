@@ -14,7 +14,7 @@
  * Triggered by the "Train & validate" button. Returns a one-line report.
  * ========================================================================== */
 
-const Trainer = (() => {
+var Trainer = (() => {
   const CSV_URL = 'https://raw.githubusercontent.com/martj42/international_results/master/results.csv';
   const MIN_YEAR = 2017;          // training window start
   const EPOCHS = 60;
@@ -149,10 +149,7 @@ const Trainer = (() => {
       t.att = clamp(att, 0.4, 3.2);
       t.def = clamp(def, 0.4, 3.0);
       const fitElo = 1530 + 300 * (f.att + f.def);  // net strength -> rating scale
-      // Blend against the FIXED FIFA prior (not the running value) so training is
-      // idempotent — clicking Train once or ten times gives the same result.
-      const prior = t.fifaElo != null ? t.fifaElo : t.elo;
-      t.baseElo = Math.round(0.5 * prior + 0.5 * clamp(fitElo, 1050, 1960));
+      t.elo = Math.round(0.5 * t.elo + 0.5 * clamp(fitElo, 1050, 1960)); // blend w/ FIFA
       t.trained = true;
       applied++;
     }

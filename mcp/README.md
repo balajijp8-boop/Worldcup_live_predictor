@@ -1,57 +1,61 @@
-# 🏆 World Cup 2026 Predictor — MCP server
+# World Cup 2026 Predictor — MCP server
 
-Exposes the predictor's engine to **Claude Desktop** as callable tools, so you
-can just *chat* with it:
+A **zero-dependency [Model Context Protocol](https://modelcontextprotocol.io)
+server** that exposes a World Cup 2026 prediction engine to **Claude Desktop**
+as callable tools, so you can just chat with it:
 
 > "What are Brazil's odds to win the World Cup?"
 > "Predict Spain vs Argentina."
 > "Show me Group D's predicted standings."
-> "Who does the model have winning the whole thing?"
 
-It reuses `js/engine.js`, `js/data.js` and `js/livescore.js` directly — same
-Dixon-Coles + Monte-Carlo model as the website, pulling **live scores from
-ESPN** on demand. **Zero dependencies** (speaks JSON-RPC over stdio by hand),
-so there is **no `npm install`**.
+It speaks JSON-RPC 2.0 over stdio by hand — **no `npm install`**. Needs **Node 18+**.
 
 ---
 
-## 1. Install Node (one time)
+## ⚠️ Requires the engine from the main project
 
-The server needs **Node.js 18 or newer** (for the built-in `fetch`).
-Download the LTS build from <https://nodejs.org/> and install it. Then in a
-**new** terminal confirm:
+This repo contains **only the MCP server**. The actual prediction engine
+(FIFA ratings → Dixon-Coles bivariate-Poisson → Monte-Carlo, plus the live
+ESPN score feed) lives in the main project:
 
-```bash
-node --version    # should print v18.x or higher
-```
+👉 **https://github.com/balajijp8-boop/Worldcup_live_predictor** — the `js/` folder.
 
-## 2. Tell Claude Desktop about the server
+The server loads four files from there: `config.js`, `data.js`, `engine.js`,
+`livescore.js`.
 
-Open Claude Desktop → **Settings → Developer → Edit Config**. That opens
-`claude_desktop_config.json` (on Windows it lives at
-`%APPDATA%\Claude\claude_desktop_config.json`). Add this server under
-`mcpServers` (merge it with anything already there):
+## Setup
 
-```json
-{
-  "mcpServers": {
-    "worldcup-predictor": {
-      "command": "node",
-      "args": ["C:\\Users\\balaj\\Desktop\\Worldcup_live_predictor\\mcp\\server.js"]
-    }
-  }
-}
-```
+1. **Install Node 18+** from <https://nodejs.org/>.
 
-Save, then **fully quit and reopen Claude Desktop** (use the tray icon → Quit;
-a window close isn't enough).
+2. **Clone the main project** (for the engine):
 
-## 3. Turn it on / off
+   ```bash
+   git clone https://github.com/balajijp8-boop/Worldcup_live_predictor.git
+   ```
 
-In Claude Desktop the server appears as a connector with a **toggle** — flip it
-off to disable, on to re-enable. You'll see a 🔌/tools icon in the chat input;
-the seven tools below appear there when it's connected. (Removing the block from
-the config file disables it permanently.)
+3. **Clone this repo** and tell the server where the engine is via the
+   `WC_ENGINE_DIR` environment variable (the path to the main project's `js/`
+   folder). For Claude Desktop, add this to `claude_desktop_config.json`
+   (Windows: `%APPDATA%\Claude\claude_desktop_config.json`):
+
+   ```json
+   {
+     "mcpServers": {
+       "worldcup-predictor": {
+         "command": "node",
+         "args": ["C:\\path\\to\\MCP_server_using_Claude\\server.js"],
+         "env": { "WC_ENGINE_DIR": "C:\\path\\to\\Worldcup_live_predictor\\js" }
+       }
+     }
+   }
+   ```
+
+   > Tip: if you instead drop `server.js` into the main project as `mcp/server.js`,
+   > `WC_ENGINE_DIR` is optional — it defaults to `../js`.
+
+4. **Fully quit and reopen Claude Desktop** (tray → Quit; closing the window
+   isn't enough — the config is only re-read on a full restart). The
+   `worldcup-predictor` connector then appears with an on/off toggle.
 
 ---
 
@@ -67,23 +71,23 @@ the config file disables it permanently.)
 | `live_scores` | Current real scores from ESPN (finished + live now) |
 | `refresh` | Re-pull live scores and re-run the whole simulation |
 
-You don't call these directly — just ask Claude in plain English and it picks
-the right tool.
+You don't call these directly — just ask Claude in plain English.
 
----
+## Test it without Claude
 
-## Tuning / troubleshooting
+```bash
+# point at your clone of the main project's js/ folder
+WC_ENGINE_DIR=/path/to/Worldcup_live_predictor/js node selftest.js
+```
 
-- **Faster responses:** the full sim is 12,000 runs. Drop it with an env var —
-  add `"env": { "WC_MC_RUNS": "4000" }` inside the server block.
-- **Offline:** if ESPN can't be reached the server logs a note to stderr and
-  falls back to the bundled pre-tournament FIFA ratings — everything still works.
-- **Server logs:** anything the server prints to **stderr** shows up in Claude
-  Desktop's MCP logs (`%APPDATA%\Claude\logs\`). stdout is reserved for the
-  protocol, so never `console.log` from the server.
-- **Test it by hand** (without Claude):
+## Tuning
 
-  ```bash
-  cd mcp
-  echo {"jsonrpc":"2.0","id":1,"method":"tools/list"} | node server.js
-  ```
+- **Faster responses:** the sim is 12,000 runs by default. Lower it with an env
+  var — add `"WC_MC_RUNS": "4000"` to the server's `env` block.
+- **Offline:** if ESPN is unreachable the server logs a note to stderr and falls
+  back to the bundled pre-tournament FIFA ratings — everything still works.
+- Server logs go to **stderr** (stdout is reserved for the protocol).
+
+## License
+
+MIT

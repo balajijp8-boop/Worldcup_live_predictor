@@ -17,7 +17,7 @@
  * this module simply upgrades those numbers to live ones. Fails silently.
  * ========================================================================== */
 
-const PlayerData = (() => {
+var PlayerData = (() => {
   const DAY = 86_400_000;
   const cache = {
     get(k) { try { const v = JSON.parse(localStorage.getItem(k)); return (v && v.exp > Date.now()) ? v.val : null; } catch { return null; } },

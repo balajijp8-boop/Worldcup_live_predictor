@@ -16,15 +16,35 @@
  * ========================================================================== */
 'use strict';
 
+/* ---- Locate the prediction engine --------------------------------------
+ * The engine itself lives in the main project (the `js/` folder of
+ * github.com/balajijp8-boop/Worldcup_live_predictor). This repo holds only the
+ * MCP server. Point WC_ENGINE_DIR at that `js/` folder; if unset we default to
+ * `../js` (i.e. this server dropped into the main repo as `mcp/`). */
+const path = require('path');
+const ENGINE_DIR = path.resolve(process.env.WC_ENGINE_DIR || path.join(__dirname, '..', 'js'));
+function engine(file) {
+  try { return require(path.join(ENGINE_DIR, file)); }
+  catch (e) {
+    console.error(
+      `[wc-mcp] Could not load the engine file "${file}" from:\n  ${ENGINE_DIR}\n\n` +
+      `This MCP server needs the prediction engine from the main project:\n` +
+      `  https://github.com/balajijp8-boop/Worldcup_live_predictor  (the js/ folder)\n\n` +
+      `Clone it, then set WC_ENGINE_DIR to its js/ path, e.g.\n` +
+      `  WC_ENGINE_DIR=C:\\path\\to\\Worldcup_live_predictor\\js\n`);
+    throw e;
+  }
+}
+
 /* ---- Wire the browser modules into Node --------------------------------- */
-global.CONFIG        = require('../js/config.js').CONFIG;
-const data           = require('../js/data.js');
+global.CONFIG        = engine('config.js').CONFIG;
+const data           = engine('data.js');
 global.BASE_TEAMS    = data.BASE_TEAMS;
 global.GROUP_LETTERS = data.GROUP_LETTERS;
 global.GROUP_FIXTURES = data.GROUP_FIXTURES;
 global.KNOWN_RESULTS = data.KNOWN_RESULTS;
-const { Engine }     = require('../js/engine.js');
-const { LiveScore }  = require('../js/livescore.js');
+const { Engine }     = engine('engine.js');
+const { LiveScore }  = engine('livescore.js');
 
 // Let users dial the sim down for speed:  WC_MC_RUNS=4000 node mcp/server.js
 if (process.env.WC_MC_RUNS) {

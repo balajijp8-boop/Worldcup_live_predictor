@@ -26,46 +26,11 @@ var state = window.__wcState || (window.__wcState = {
 
 /* ---- Bootstrap ----------------------------------------------------------- */
 function buildTeams() {
-  for (const t of BASE_TEAMS) {
-    const c = { ...t };
-    c.fifaElo = c.elo;     // immutable FIFA prior
-    c.baseElo = c.elo;     // current prior (FIFA, or trained value); results layer on top
-    state.teamsByName[t.name] = c;
-  }
-}
-
-/* Rebuild every team's Elo from its prior + a replay of all FINISHED results.
- * Pure function of (baseElo + finished scores) => idempotent, and a corrected
- * score (e.g. live feed fixing a wrong one) never double-counts. */
-function recomputeRatings() {
-  for (const name in state.teamsByName) {
-    const t = state.teamsByName[name];
-    t.elo = t.baseElo != null ? t.baseElo : t.elo;
-  }
-  for (const fx of state.groupFixtures) {
-    if (fx.status !== 'FINISHED' || fx.homeGoals == null) continue;
-    const a = state.teamsByName[fx.home], b = state.teamsByName[fx.away];
-    if (!a || !b) continue;
-    const upd = Engine.updateElo(a.elo, b.elo, fx.homeGoals, fx.awayGoals);
-    a.elo = upd.eloA; b.elo = upd.eloB;
-  }
+  for (const t of BASE_TEAMS) state.teamsByName[t.name] = { ...t };
 }
 
 function buildGroupFixtures() {
   let id = 1;
-  // Use the real published schedule, ordered chronologically by kickoff.
-  if (typeof GROUP_FIXTURES !== 'undefined' && GROUP_FIXTURES.length) {
-    const sorted = [...GROUP_FIXTURES].sort((a, b) => (a.ko < b.ko ? -1 : a.ko > b.ko ? 1 : 0));
-    for (const m of sorted) {
-      state.groupFixtures.push({
-        id: id++, home: m.home, away: m.away, group: m.g,
-        status: 'SCHEDULED', homeGoals: null, awayGoals: null, predicted: null,
-        ko: m.ko, day: m.day, time: m.time, city: m.city,
-      });
-    }
-    return;
-  }
-  // Fallback: generated round-robin (no real dates).
   for (const letter of GROUP_LETTERS) {
     const g = BASE_TEAMS.filter(t => t.group === letter).map(t => t.name);
     const pairs = [[0, 1], [2, 3], [0, 2], [1, 3], [0, 3], [1, 2]];
@@ -86,9 +51,11 @@ function applyKnownResults() {
     if (!fx) continue;
     const a = state.teamsByName[fx.home], b = state.teamsByName[fx.away];
     fx.predicted = Engine.matchProbabilities(a, b);
-    // Just record the score/status; Elo is rebuilt by recomputeRatings().
     if (k.status === 'FINISHED') {
-      fx.homeGoals = k.homeGoals; fx.awayGoals = k.awayGoals; fx.status = 'FINISHED';
+      fx.homeGoals = k.homeGoals; fx.awayGoals = k.awayGoals;
+      fx.status = 'FINISHED';
+      const upd = Engine.updateElo(a.elo, b.elo, fx.homeGoals, fx.awayGoals);
+      a.elo = upd.eloA; b.elo = upd.eloB;
     } else if (k.status === 'LIVE') {
       fx.status = 'LIVE';
       if (k.homeGoals != null) { fx.homeGoals = k.homeGoals; fx.awayGoals = k.awayGoals; }
@@ -96,46 +63,24 @@ function applyKnownResults() {
   }
 }
 
-/* The live feed is AUTHORITATIVE: it overrides any baked score (so a wrong
- * hardcoded result self-corrects) and clears a status the feed contradicts
- * (e.g. a game we marked live that hasn't actually kicked off). */
 function mergeLiveMatches(matches) {
   if (!matches) return;
-  let changed = false;
   for (const m of matches) {
-    // Exact match on canonical names (no fuzzy "South Africa"/"South Korea"
-    // collisions); also handle the feed listing home/away the other way round.
-    let fx = state.groupFixtures.find(f => f.home === m.home && f.away === m.away);
-    let hg = m.homeGoals, ag = m.awayGoals;
-    if (!fx) {
-      fx = state.groupFixtures.find(f => f.home === m.away && f.away === m.home);
-      if (fx) { hg = m.awayGoals; ag = m.homeGoals; }
-    }
+    const fx = state.groupFixtures.find(f => sameTeam(f.home, m.home) && sameTeam(f.away, m.away));
     if (!fx) continue;
     if (!fx.predicted) {
       const a = state.teamsByName[fx.home], b = state.teamsByName[fx.away];
-      if (a && b) fx.predicted = Engine.matchProbabilities(a, b);
+      fx.predicted = Engine.matchProbabilities(a, b);
     }
-    if (m.status === 'FINISHED' && hg != null) {
-      if (fx.status !== 'FINISHED' || fx.homeGoals !== hg || fx.awayGoals !== ag) {
-        fx.homeGoals = hg; fx.awayGoals = ag; fx.status = 'FINISHED'; changed = true;
-      }
+    if (m.status === 'FINISHED' && fx.status !== 'FINISHED') {
+      fx.homeGoals = m.homeGoals; fx.awayGoals = m.awayGoals;
+      fx.status = 'FINISHED';
+      onResult(fx, false);
     } else if (['LIVE', 'IN_PLAY', 'PAUSED'].includes(m.status)) {
       fx.status = 'LIVE';
-      if (hg != null) { fx.homeGoals = hg; fx.awayGoals = ag; }
-      changed = true;
-    } else if (m.status === 'SCHEDULED' && fx.status !== 'FINISHED') {
-      // feed says not started -> undo any stale/baked "live" state
-      if (fx.status !== 'SCHEDULED' || fx.homeGoals != null) {
-        fx.status = 'SCHEDULED'; fx.homeGoals = null; fx.awayGoals = null; changed = true;
-      }
+      fx.homeGoals = m.homeGoals; fx.awayGoals = m.awayGoals;
+      UI.renderMatches(state);
     }
-  }
-  if (changed) {
-    recomputeRatings(); recomputeForm(); recomputeEliminations(); recompute();
-    UI.renderMatches(state); UI.flashRecalc();
-    const sel = state.groupFixtures.find(f => f.id === state.selectedFixtureId);
-    if (sel) UI.renderMatchDetail(state, sel);
   }
 }
 var sameTeam = (a, b) => a && b && a.toLowerCase().includes(b.toLowerCase().split(' ')[0]);
@@ -144,7 +89,8 @@ var sameTeam = (a, b) => a && b && a.toLowerCase().includes(b.toLowerCase().spli
 function onResult(fx, silent) {
   const a = state.teamsByName[fx.home], b = state.teamsByName[fx.away];
   if (!fx.predicted) fx.predicted = Engine.matchProbabilities(a, b);
-  recomputeRatings();
+  const upd = Engine.updateElo(a.elo, b.elo, fx.homeGoals, fx.awayGoals);
+  a.elo = upd.eloA; b.elo = upd.eloB;
   recomputeForm();
   recomputeEliminations();
   recompute();
@@ -212,6 +158,9 @@ function recompute() {
   }
   state.predicted = Engine.predictBracket(state, groupOdds);
   state.bracket = Engine.sampleBracket(state);
+  // "Actual outcome": R32 from the real finished group results, knockouts projected.
+  // Falls back to the predicted bracket until the groups can resolve the slotting.
+  try { state.actual = Engine.actualBracket(state); } catch (e) { state.actual = state.predicted; }
   UI.renderOdds(state);
   UI.renderGroups(state);
   UI.renderBracket(state);
@@ -254,6 +203,9 @@ function attachEvents() {
     btn.addEventListener('click', () => {
       state.bracketMode = btn.dataset.mode;
       if (state.bracketMode === 'sample') state.bracket = Engine.sampleBracket(state);
+      if (state.bracketMode === 'actual') {
+        try { state.actual = Engine.actualBracket(state); } catch (e) { state.actual = state.predicted; }
+      }
       document.querySelectorAll('.bracket-mode').forEach(b => b.classList.toggle('mode-active', b === btn));
       UI.renderBracket(state);
     }));
@@ -262,7 +214,7 @@ function attachEvents() {
   const refresh = document.getElementById('refresh-btn');
   if (refresh) refresh.addEventListener('click', () => {
     UI.flashRecalc();
-    recomputeRatings(); recomputeForm(); recomputeEliminations(); recompute();
+    recomputeForm(); recomputeEliminations(); recompute();
     UI.renderMatches(state);
     UI.setStatus('Odds refreshed', Api.live ? 'live' : 'idle');
   });
@@ -274,7 +226,7 @@ function attachEvents() {
     train.disabled = true; const orig = train.textContent; train.textContent = '⚙ training…';
     try {
       const report = await Trainer.run(state);
-      recomputeRatings(); recomputeForm(); recomputeEliminations(); recompute();
+      recomputeForm(); recomputeEliminations(); recompute();
       UI.renderMatches(state);
       UI.setStatus(report || 'model trained', 'live');
     } catch (err) {
@@ -361,7 +313,6 @@ async function init() {
   buildGroupFixtures();
   applyKnownResults();
 
-  recomputeRatings();
   recomputeForm();
   recomputeEliminations();
   recompute();

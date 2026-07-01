@@ -10,7 +10,7 @@
  *   { id, home, away, group|round, status, homeGoals, awayGoals, utcDate }
  * ========================================================================== */
 
-const Api = (() => {
+var Api = (() => {
   const live = !!CONFIG.API_TOKEN;
 
   function url(path) {

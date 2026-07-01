@@ -8,7 +8,7 @@
  * live and falls back to the snapshot on any error.
  * ========================================================================== */
 
-const Market = (() => {
+var Market = (() => {
 
   // Real Polymarket implied probabilities (canonical team names).
   const SNAPSHOT = {

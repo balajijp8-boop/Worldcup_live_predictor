@@ -11,11 +11,6 @@ var UI = (() => {
   const $ = id => document.getElementById(id);
   const fmtPct = p => (p * 100).toFixed(1) + '%';
 
-  /* Kickoff label — times are already stored in Amsterdam time (CEST). */
-  function koLabel(fx) {
-    return fx.day ? `${fx.day}, ${fx.time} CEST` : '';
-  }
-
   // Editorial palette
   const C = {
     t1: '#141413',         // primary
@@ -191,11 +186,12 @@ var UI = (() => {
     if (!src || !src.bracket) return;
     const predicted = state.bracketMode !== 'sample';
 
-    // Show the FULL 2026 knockout tree starting at the Round of 32 (16 ties →
-    // 8 per side in the mirrored layout), through to the Final.
-    const rounds = src.bracket;
+    // Use rounds R16..Final for the mirrored layout (R32 makes 16 leaves which
+    // is fine, but R16 makes the most legible chart). If R32 exists (sample
+    // mode), keep the visualization starting at R16 (winners of R32) instead.
+    let rounds = src.bracket;
+    if (rounds[0] && /Round of 32/i.test(rounds[0].name)) rounds = rounds.slice(1);
     if (!rounds.length) return;
-    const hasR32 = rounds[0] && /Round of 32/i.test(rounds[0].name);
 
     const f = n => flag(state.teamsByName[n], 'sm');
     const pct = p => `${Math.round(p * 100)}%`;
@@ -239,7 +235,7 @@ var UI = (() => {
     const headerCell = txt => `<div style="flex:1;text-align:center;font-size:10px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:${C.t3};padding:0 4px;">${txt}</div>`;
     const headerSpacer = `<div style="width:170px;flex:0 0 auto;"></div>`;
     const headers = halves.map(r => r.name);
-    const headerBar = `<div style="display:flex;align-items:center;border-top:1px solid ${C.line};border-bottom:1px solid ${C.line};padding:11px 0;margin-bottom:16px;gap:24px;">
+    const headerBar = `<div style="display:flex;align-items:center;border-top:1px solid ${C.line};border-bottom:1px solid ${C.line};padding:11px 0;margin-bottom:16px;gap:24px;min-width:1140px;">
       ${headers.map(h => `<div style="width:170px;text-align:center;font-size:10px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:${C.t3};flex:0 0 auto;">${h}</div>`).join('')}
       <div style="flex:1;text-align:center;font-size:11px;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:${C.gold};">Final</div>
       ${[...headers].reverse().map(h => `<div style="width:170px;text-align:center;font-size:10px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:${C.t3};flex:0 0 auto;">${h}</div>`).join('')}
@@ -267,12 +263,10 @@ var UI = (() => {
       </div>
     </div>`;
 
-    const wide = hasR32 ? 1820 : 1280;
-    const tall = hasR32 ? 760 : 560;
     board.innerHTML = `<div style="overflow-x:auto;padding-bottom:8px;">
-      <div style="min-width:${wide}px;">
+      <div style="min-width:1280px;">
         ${headerBar}
-        <div class="bk-grid" style="display:flex;align-items:stretch;gap:24px;min-height:${tall}px;position:relative;">
+        <div class="bk-grid" style="display:flex;align-items:stretch;gap:24px;min-height:560px;position:relative;">
           ${leftRounds}
           ${finalBlock}
           ${rightRounds}
@@ -340,9 +334,9 @@ var UI = (() => {
   function renderMatches(state) {
     const list = $('match-list');
     if (!list) return;
-    // Chronological — exactly the order the matches kick off.
+    const rank = { LIVE: 0, FINISHED: 1, SCHEDULED: 2 };
     const fixtures = [...state.groupFixtures]
-      .sort((x, y) => (x.ko || '').localeCompare(y.ko || '') || x.id - y.id);
+      .sort((x, y) => (rank[x.status] ?? 2) - (rank[y.status] ?? 2) || x.id - y.id);
 
     list.innerHTML = fixtures.map(fx => {
       const a = state.teamsByName[fx.home], b = state.teamsByName[fx.away];
@@ -366,23 +360,20 @@ var UI = (() => {
       </div>` : '';
 
       let predictedInfo = '';
-      if (probs) {
-        const p = probs;
-        // The model's "pick" is the most likely OUTCOME (not the scoreline) —
-        // judging by outcome keeps the verdict consistent with what we show.
-        const pk = p.win >= p.draw && p.win >= p.loss ? 'win' : p.draw >= p.loss ? 'draw' : 'loss';
-        const pct = Math.round(Math.max(p.win, p.draw, p.loss) * 100);
-        const pkText = pk === 'win' ? `${fx.home} ${pct}%` : pk === 'loss' ? `${fx.away} ${pct}%` : `Draw ${pct}%`;
-        let verdict = '';
+      if ((done || live) && fx.predicted) {
+        const p = fx.predicted;
+        let verdict;
         if (done) {
           const actual = fx.homeGoals > fx.awayGoals ? 'win' : fx.homeGoals === fx.awayGoals ? 'draw' : 'loss';
-          const hit = pk === actual;
-          verdict = `<span style="color:${hit ? C.green : C.red};font-weight:500;">${hit ? 'Called correctly' : 'Upset'}</span>`;
-        } else if (live) {
-          verdict = `<span style="color:${C.t3};">in play</span>`;
+          const pick = p.win >= p.draw && p.win >= p.loss ? 'win' : p.draw >= p.loss ? 'draw' : 'loss';
+          const hit = pick === actual;
+          const exact = p.likelyScore === `${fx.homeGoals}-${fx.awayGoals}`;
+          verdict = `<span style="color:${hit ? C.green : C.red};font-weight:500;">${hit ? 'Called correctly' : 'Upset'}${exact ? ' · exact' : ''}</span>`;
+        } else {
+          verdict = `<span style="color:${C.t3};">awaiting result</span>`;
         }
         predictedInfo = `<div style="display:flex;justify-content:space-between;font-size:11px;color:${C.t2};margin-top:10px;">
-          <span>Pick <span style="color:${C.t1};">${pkText}</span></span>${verdict}
+          <span>Predicted <span style="color:${C.t1};">${p.likelyScore}</span></span>${verdict}
         </div>`;
       }
 
@@ -391,7 +382,7 @@ var UI = (() => {
 
       return `<button class="match-card" data-id="${fx.id}" style="width:100%;text-align:left;cursor:pointer;display:block;background:${bg};border:1px solid ${bd};padding:16px 18px;transition:background .15s,border-color .15s;margin-bottom:10px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;">
-          <span style="font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:${C.t3};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">Group ${a.group} · ${koLabel(fx)}${fx.city ? ` · ${fx.city}` : ''}</span><span style="flex-shrink:0;margin-left:10px;">${statusBadge}</span>
+          <span style="font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:${C.t3};">Group ${a.group}</span>${statusBadge}
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
           <span style="display:flex;align-items:center;gap:9px;font-size:14px;font-weight:500;color:${C.t1};overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;letter-spacing:-0.005em;">${flag(a, 'sm')}${fx.home}</span>
@@ -443,13 +434,9 @@ var UI = (() => {
     if (done) {
       const actual = fx.homeGoals > fx.awayGoals ? 'win' : fx.homeGoals === fx.awayGoals ? 'draw' : 'loss';
       const pick = p.win >= p.draw && p.win >= p.loss ? 'win' : p.draw >= p.loss ? 'draw' : 'loss';
+      const hit = pick === actual;
       const exact = p.likelyScore === `${fx.homeGoals}-${fx.awayGoals}`;
-      const hit = pick === actual;             // judged on the predicted OUTCOME
-      const main = hit ? 'Outcome correctly predicted' : 'Outcome was an upset';
-      const note = exact ? ` · top scoreline (${p.likelyScore}) was exact` : '';
-      verdict = `<div style="text-align:center;font-size:12px;font-weight:500;margin-top:14px;letter-spacing:0.04em;">
-        <span style="color:${hit ? C.green : C.red};">${main}</span><span style="color:${C.green};">${note}</span>
-      </div>`;
+      verdict = `<div style="text-align:center;font-size:12px;font-weight:500;margin-top:14px;color:${hit ? C.green : C.red};letter-spacing:0.04em;">${hit ? 'Outcome correctly predicted' : 'Result went against the model'}${exact ? ' · exact score' : ''}</div>`;
     }
 
     const teamBlock = (t, name) => `<div style="text-align:center;flex:1;min-width:0;">

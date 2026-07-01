@@ -16,7 +16,7 @@
  *     Engine.simulateTournament(state) -> fresh odds for everyone
  * ========================================================================== */
 
-const Engine = (() => {
+var Engine = (() => {
 
   /* ---- Seeded RNG (mulberry32) --------------------------------------------
    * The whole Monte-Carlo is driven by this so a recompute with unchanged
@@ -414,6 +414,73 @@ const Engine = (() => {
     return { bracket: tree, champion, standings, thirds: best.map(t => t.name) };
   }
 
+  /* Real group standings from FINISHED results (points, goal difference, goals),
+   * NOT the simulation. Teams with no finished games sit at 0. */
+  function actualStandings(state) {
+    const byGroup = {};
+    for (const letter of GROUP_LETTERS) byGroup[letter] = [];
+    for (const name in state.teamsByName) {
+      const t = state.teamsByName[name];
+      let pts = 0, gf = 0, ga = 0, played = 0;
+      for (const fx of state.groupFixtures) {
+        if (fx.group !== t.group || fx.status !== 'FINISHED' || fx.homeGoals == null) continue;
+        if (fx.home !== name && fx.away !== name) continue;
+        const me = fx.home === name ? fx.homeGoals : fx.awayGoals;
+        const op = fx.home === name ? fx.awayGoals : fx.homeGoals;
+        played++; gf += me; ga += op; pts += me > op ? 3 : me === op ? 1 : 0;
+      }
+      byGroup[t.group].push({ name, group: t.group, pts, gf, ga, played, advance: 0 });
+    }
+    for (const letter of GROUP_LETTERS) byGroup[letter].sort(cmpGroupRow);
+    return byGroup;
+  }
+
+  /* Public: the ACTUAL bracket — R32 built from the REAL finished group results
+   * (the live feed carries the group games), then knockout rounds projected by
+   * the model. Reads as "what really happened in the groups -> projected on".
+   * Same shape as predictBracket so the UI renders it identically. Throws if the
+   * groups aren't complete enough to resolve the official third-place slotting;
+   * the caller falls back to the predicted bracket in that case. */
+  function actualBracket(state) {
+    const T = state.teamsByName;
+    const standings = actualStandings(state);
+
+    const winnersMap = {}, runnersMap = {}, thirds = [];
+    for (const letter of GROUP_LETTERS) {
+      winnersMap[letter] = standings[letter][0].name;
+      runnersMap[letter] = standings[letter][1].name;
+      const r = standings[letter][2];
+      thirds.push({ name: r.name, group: letter, pts: r.pts, gd: r.gf - r.ga, gf: r.gf });
+    }
+    thirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
+    const best = thirds.slice(0, 8);
+    const thirdByGroup = {};
+    for (const t of best) thirdByGroup[t.group] = t.name;
+    const assign = assignThirds(best.map(t => t.group));
+
+    let round = buildR32(winnersMap, runnersMap, thirdByGroup, assign);
+    // Guard: every slot must resolve to a real team.
+    for (const [n1, n2] of round) if (!T[n1] || !T[n2]) throw new Error('groups incomplete for actual bracket');
+
+    const tree = [];
+    let stage = STAGE.R16, champion;
+    while (true) {
+      const winners = [], matches = [];
+      for (const [n1, n2] of round) {
+        const p = matchProbabilities(T[n1], T[n2]);
+        const pHome = p.win + p.draw / 2, pAway = p.loss + p.draw / 2;
+        const winner = pHome >= pAway ? n1 : n2;
+        winners.push(winner);
+        matches.push({ home: n1, away: n2, winner, pHome, pAway, likely: p.likelyScore });
+      }
+      tree.push({ name: ROUND_NAMES[stage - 2], matches });
+      if (winners.length === 1) { champion = winners[0]; break; }
+      round = pairUp(winners);
+      stage++;
+    }
+    return { bracket: tree, champion, standings };
+  }
+
   /* Public: one representative RANDOM simulated bracket (full knockout tree).
    * Fresh seed each call so re-rolls genuinely differ. */
   function sampleBracket(state) {
@@ -424,7 +491,7 @@ const Engine = (() => {
   return {
     eloExpected, updateElo, expectedGoals,
     matchProbabilities, simulateTournament, sampleBracket,
-    predictBracket, predictedStandings,
+    predictBracket, predictedStandings, actualBracket,
   };
 })();
 
